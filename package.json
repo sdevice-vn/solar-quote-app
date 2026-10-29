@@ -1,0 +1,21 @@
+{
+  "name": "bao-gia-dien-mat-troi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Báo giá điện mặt trời - Android app (Capacitor)",
+  "scripts": {
+    "build:web": "node build-www.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
+    "@fontsource/be-vietnam-pro": "^5.3.0",
+    "@fontsource/bricolage-grotesque": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "2.5.1"
+  }
+}
