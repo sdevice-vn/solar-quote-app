@@ -1,0 +1,46 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Cài thư viện
+        run: npm ci
+
+      - name: Tạo thư mục www (thư viện + font chạy offline)
+        run: node build-www.mjs
+
+      - name: Tạo project Android
+        run: |
+          npx cap add android
+          cp -r icons/* android/app/src/main/res/
+          sed -i 's/#FFFFFF/#0E6B52/' android/app/src/main/res/values/ic_launcher_background.xml
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bao-gia-dien-mat-troi-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
