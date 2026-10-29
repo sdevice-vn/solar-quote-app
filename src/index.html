@@ -1,0 +1,881 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Báo giá điện mặt trời</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: thanh tab giống các sheet Excel; tab Báo giá là tờ A4 có thể xuất PDF; các tab bảng giá là bảng sửa trực tiếp */
+:root {
+  --bg: #e9ede8;
+  --panel: #f6f8f4;
+  --paper: #fdfdfb;
+  --ink: #15221d;
+  --muted: #5d6d65;
+  --line: #d3dad3;
+  --subrow: #f0f3ee;
+  --accent: #0e6b52;
+  --accent-ink: #ffffff;
+  --sun: #d98e04;
+  --sun-soft: #fbefd0;
+  --warn: #b4531a;
+  --danger: #b42318;
+  --font-display: "Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1613; --panel: #16201b; --paper: #1a2621; --ink: #e8eee9; --muted: #98a89f; --line: #2b3a33; --subrow: #202e28;
+    --accent: #4fc9a2; --accent-ink: #08201a; --sun: #f0b43a; --sun-soft: #3a2f10; --warn: #ef9a62; --danger: #f2877c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1613; --panel: #16201b; --paper: #1a2621; --ink: #e8eee9; --muted: #98a89f; --line: #2b3a33; --subrow: #202e28;
+  --accent: #4fc9a2; --accent-ink: #08201a; --sun: #f0b43a; --sun-soft: #3a2f10; --warn: #ef9a62; --danger: #f2877c;
+  color-scheme: dark;
+}
+/* Tờ xuất PDF luôn dùng bảng màu sáng */
+.force-light {
+  --paper: #fdfdfb; --ink: #15221d; --muted: #5d6d65; --line: #d3dad3; --subrow: #f0f3ee; --accent: #0e6b52; --sun: #d98e04; --sun-soft: #fbefd0; --warn: #b4531a;
+  color: var(--ink); background: var(--paper);
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-block: 20px 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.top h1 { font: 800 clamp(22px, 3.2vw, 30px)/1.1 var(--font-display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sync { font-size: 12px; color: var(--muted); }
+.btn { font: 600 13px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; min-height: 38px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 2px solid var(--ink); scrollbar-width: thin; }
+.tabs button { font: 600 13px var(--font-body); white-space: nowrap; border: 1px solid var(--line); border-bottom: 0; background: var(--panel); color: var(--muted); padding: 10px 14px; border-radius: 6px 6px 0 0; cursor: pointer; min-height: 40px; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tabs .gap { flex: 1 0 12px; }
+body.present .internal { display: none !important; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
+@media (max-width: 960px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 22px 28px; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; min-width: 0; align-content: start; }
+legend { font: 700 12px/1 var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--accent); padding: 0 0 10px; }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0; }
+input, select, textarea { width: 100%; font: 500 15px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; min-height: 40px; }
+textarea { resize: vertical; line-height: 1.45; }
+input[type=number] { font-variant-numeric: tabular-nums; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper); }
+.seg button { font: 600 13px var(--font-body); padding: 9px 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.range { display: grid; gap: 6px; }
+.range-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
+.range-head b { font: 600 15px var(--font-mono); color: var(--ink); }
+input[type=range] { padding: 0; min-height: 24px; accent-color: var(--accent); border: 0; background: transparent; }
+.hint { font-size: 12px; color: var(--muted); }
+h3.cap { margin: 0; font: 700 12px/1 var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+/* kết quả nhanh */
+.side { display: grid; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); }
+@media (max-width: 960px) { .side { position: static; } }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-block: 2px solid var(--ink); }
+.kpi { padding: 14px 14px 14px 0; display: grid; gap: 2px; align-content: start; min-width: 0; }
+.kpi + .kpi { padding-left: 14px; border-left: 1px solid var(--line); }
+@media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr; } .kpi, .kpi + .kpi { padding-left: 0; border-left: 0; border-bottom: 1px solid var(--line); } .kpi:nth-child(2n) { padding-left: 14px; border-left: 1px solid var(--line); } }
+.side .kpis { grid-template-columns: 1fr 1fr; }
+.side .kpi, .side .kpi + .kpi { padding-left: 0; border-left: 0; border-bottom: 1px solid var(--line); }
+.side .kpi:nth-child(2n) { padding-left: 14px; border-left: 1px solid var(--line); }
+.kpi small { font-size: 12px; color: var(--muted); }
+.kpi strong { font: 700 clamp(22px, 2.6vw, 28px)/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.kpi strong em { font: 500 13px var(--font-body); color: var(--muted); font-style: normal; margin-left: 3px; }
+.kpi.key strong { color: var(--accent); }
+.bigtotal { display: grid; gap: 2px; }
+.bigtotal small { color: var(--muted); font-size: 12px; }
+.bigtotal strong { font: 800 30px/1.1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.compare { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: 13px; }
+.bar .track { height: 22px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 3px; transition: width .35s ease; }
+.bar .fill.before { background: var(--muted); }
+.bar .fill.after { background: var(--sun); }
+.bar b { font: 500 14px var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+@media (max-width: 480px) { .bar { grid-template-columns: 64px minmax(0, 1fr); } .bar b { grid-column: 1 / -1; text-align: left; margin-top: -6px; } }
+.usage { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* tờ báo giá */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toolbar .grow { flex: 1; }
+.sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: clamp(16px, 3vw, 32px); display: grid; gap: 22px; min-width: 0; color: var(--ink); }
+.sheet-head { display: grid; gap: 14px; }
+.sheet-head h2 { font: 800 clamp(20px, 3vw, 28px)/1.15 var(--font-display); margin: 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+dl.meta { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px 24px; font-size: 14px; }
+.meta div { display: grid; gap: 2px; min-width: 0; }
+.meta dt { font-size: 12px; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.tablewrap { display: grid; gap: 10px; min-width: 0; }
+.th-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.linkbtn { font: 600 13px var(--font-body); color: var(--accent); background: none; border: 0; padding: 6px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.q { min-width: 640px; }
+th { text-align: left; font: 600 12px var(--font-body); color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.stt { color: var(--muted); width: 34px; }
+td .model { font: 500 13px var(--font-mono); }
+td .sub { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+tr.sub td { padding: 5px 10px; font-size: 12.5px; color: var(--muted); border-bottom: 1px dashed var(--line); background: var(--subrow); }
+tr.sub td:nth-child(2) { padding-left: 22px; }
+tr.neg td.n { color: var(--danger); }
+tr.total td { border-bottom: 0; border-top: 2px solid var(--ink); padding-top: 14px; font-weight: 700; }
+tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: var(--accent); }
+.qty { display: inline-flex; gap: 4px; align-items: center; }
+.qty input { width: 58px; min-height: 32px; padding: 4px 6px; text-align: center; font-size: 14px; }
+.qb { width: 32px; height: 32px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 6px; font-size: 16px; cursor: pointer; line-height: 1; }
+.qb:hover { border-color: var(--accent); }
+.notice { background: var(--sun-soft); border-left: 3px solid var(--sun); padding: 10px 12px; font-size: 13px; border-radius: 0 6px 6px 0; color: var(--ink); }
+.terms { font-size: 13px; color: var(--muted); white-space: pre-wrap; margin: 0; }
+.sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; text-align: center; padding-top: 8px; }
+.sign b { display: block; }
+.sign small { color: var(--muted); }
+.sign .space { height: 64px; }
+.sign .name { font-weight: 600; }
+
+/* sửa dòng báo giá */
+.lines { display: grid; gap: 8px; }
+.line { display: grid; grid-template-columns: minmax(160px, 3fr) 70px 70px minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(90px, 1fr) 40px; gap: 8px; align-items: end; }
+.line .hd { font-size: 12px; color: var(--muted); }
+@media (max-width: 860px) { .line { grid-template-columns: 1fr 1fr; } .line .name { grid-column: 1 / -1; } }
+
+/* bảng sửa trực tiếp */
+.cat { min-width: 760px; }
+.cat td { padding: 4px 6px; vertical-align: middle; }
+.cat input { min-height: 34px; padding: 5px 8px; font-size: 14px; border-color: transparent; background: transparent; }
+.cat input:hover { border-color: var(--line); }
+.cat input:focus { background: var(--paper); }
+.cat input.num { text-align: right; font-variant-numeric: tabular-nums; min-width: 96px; }
+.cat input.f-m { min-width: 190px; } .cat input.f-b { min-width: 120px; } .cat input.f-d { min-width: 280px; } .cat input.f-u { min-width: 70px; }
+.cat input.f-cost, .cat input.f-p { min-width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+.cat td.k { color: var(--muted); font-size: 12px; white-space: nowrap; padding-inline: 10px; }
+.cat tfoot td { border-bottom: 0; font-weight: 700; }
+.cat-foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.xbtn { width: 34px; height: 34px; border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 18px; line-height: 1; }
+.xbtn:hover:not(:disabled) { color: var(--danger); border-color: var(--line); }
+.xbtn:disabled { opacity: .3; cursor: not-allowed; }
+.profit { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 10px; margin-top: 8px; border-top: 2px solid var(--ink); font-weight: 700; }
+.profit span:last-child { color: var(--accent); font-variant-numeric: tabular-nums; }
+.stat { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; font-size: 14px; }
+.stat dt { color: var(--muted); }
+.stat dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.stat h3 { grid-column: 1 / -1; margin: 14px 0 4px; }
+.tier { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--ink); color: var(--bg);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.dock-in { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dock .t small { display: block; font-size: 12px; opacity: .75; }
+.dock .t strong { font: 800 22px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.dock .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.dock .btn { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); }
+.dock .btn.primary { background: var(--sun); color: #231800; border-color: var(--sun); }
+.dock button:focus-visible { outline-color: var(--bg); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 6px; font-size: 14px; z-index: 9; max-width: calc(100% - 32px); }
+.sr { position: absolute; left: -9999px; }
+.pdfhost { position: fixed; left: -12000px; top: 0; width: 794px; }
+.pdfhost .sheet { border: 0; border-radius: 0; padding: 36px 40px; gap: 20px; width: 794px; }
+.pdfhost .noprint { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .bar .fill { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Báo giá điện năng lượng mặt trời</h1>
+    <div class="top-actions">
+      <span class="sync" id="sync"></span>
+      <button type="button" class="btn" id="presentBtn" aria-pressed="false">Chế độ trình bày</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Các trang tính" id="tabs"></nav>
+
+  <!-- 1. NHẬP LIỆU -->
+  <section id="p-nhap-lieu" role="tabpanel" hidden>
+    <div class="two">
+      <form class="panel" id="form" onsubmit="return false" autocomplete="off">
+        <div class="cols">
+          <fieldset>
+            <legend>Khách hàng</legend>
+            <label for="cust">Tên khách hàng<input id="cust" type="text" data-b="inp.cust"></label>
+            <label for="addr">Địa chỉ lắp đặt<input id="addr" type="text" data-b="inp.addr"></label>
+            <label for="seller">Người bán<input id="seller" type="text" data-b="inp.seller"></label>
+          </fieldset>
+          <fieldset>
+            <legend>Nhu cầu điện</legend>
+            <div class="seg" role="group" aria-label="Cách nhập mức tiêu thụ">
+              <button type="button" id="mMoney" aria-pressed="true">Theo tiền điện</button>
+              <button type="button" id="mKwh" aria-pressed="false">Theo số kWh</button>
+            </div>
+            <label for="money" id="lMoney">Tiền điện mỗi tháng (đã gồm VAT, đ)<input id="money" type="number" min="0" step="50000" data-b="inp.money" inputmode="numeric"></label>
+            <label for="kwh" id="lKwh" hidden>Điện tiêu thụ mỗi tháng (kWh)<input id="kwh" type="number" min="0" step="10" data-b="inp.kwh" inputmode="numeric"></label>
+            <div class="range">
+              <div class="range-head"><label for="day" style="display:block">Điện dùng ban ngày</label><b id="dayV"></b></div>
+              <input id="day" type="range" min="0" max="100" step="5" data-b="inp.day">
+            </div>
+            <div class="range">
+              <div class="range-head"><label for="cut" style="display:block">Muốn giảm tiền điện</label><b id="cutV"></b></div>
+              <input id="cut" type="range" min="10" max="100" step="5" data-b="inp.cut">
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Thiết bị</legend>
+            <label for="pv">Tấm pin<select id="pv" data-b="inp.pv"></select></label>
+            <label for="inv">Inverter<select id="inv" data-b="inp.inv"></select></label>
+            <label for="bat">Pin lưu trữ<select id="bat" data-b="inp.bat"></select></label>
+            <label for="batQty">Số lượng pin lưu trữ (0 = tự tính theo nhu cầu)<input id="batQty" type="number" min="0" step="1" data-b="inp.batQty"></label>
+            <label for="sCab">Tủ điện<select id="sCab" data-b="inp.sel.cab"></select></label>
+            <label for="sAts">ATS chuyển nguồn<select id="sAts" data-b="inp.sel.ats"></select></label>
+            <label for="sDuct">Máng điện<select id="sDuct" data-b="inp.sel.duct"></select></label>
+          </fieldset>
+          <fieldset>
+            <legend>Dây dẫn (mét)</legend>
+            <label for="wDc">Dây DC 4mm<input id="wDc" type="number" min="0" data-b="inp.wDc"></label>
+            <label for="wCad">Dây Cadivi 6.0<input id="wCad" type="number" min="0" data-b="inp.wCad"></label>
+            <label for="wAwg">Cáp pin AWG4<input id="wAwg" type="number" min="0" data-b="inp.wAwg"></label>
+            <span class="hint">Một chuỗi 8 tấm dùng khoảng 30 m dây DC.</span>
+          </fieldset>
+          <fieldset>
+            <legend>Chi phí khác (đ)</legend>
+            <label for="fInstall">Công lắp đặt trên mái<input id="fInstall" type="number" min="0" step="50000" data-b="inp.fInstall"></label>
+            <label for="fTransport">Vận chuyển<input id="fTransport" type="number" min="0" step="50000" data-b="inp.fTransport"></label>
+            <label for="fCab">Lắp tủ điện và bảo hành<input id="fCab" type="number" min="0" step="50000" data-b="inp.fCab"></label>
+            <label for="fWire">Phát sinh dây dẫn<input id="fWire" type="number" min="0" step="50000" data-b="inp.fWire"></label>
+          </fieldset>
+        </div>
+      </form>
+      <aside class="side panel">
+        <div class="bigtotal"><small>Tổng cộng</small><strong id="qTotal"></strong></div>
+        <div class="kpis" id="kpiA"></div>
+        <div class="compare" id="cmpA"></div>
+        <p class="usage" id="usageA"></p>
+        <button type="button" class="btn primary" data-go="bao-gia">Xem tờ báo giá</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 2. BÁO GIÁ -->
+  <section id="p-bao-gia" role="tabpanel" hidden>
+    <div style="display:grid;gap:14px">
+      <details class="panel" id="editLines">
+        <summary style="cursor:pointer;font-weight:600">Chỉnh sửa báo giá: thêm thiết bị, chiết khấu, ghi chú</summary>
+        <div style="display:grid;gap:16px;padding-top:16px">
+          <div class="lines" id="lines"></div>
+          <div><button type="button" class="btn" id="addLine">Thêm dòng thiết bị</button>
+          <span class="hint" style="margin-left:8px">Gõ tên để chọn từ bảng giá, giá sẽ tự điền và vẫn sửa được.</span></div>
+          <div class="cols">
+            <label for="discount">Chiết khấu (đ)<input id="discount" type="number" min="0" step="100000" data-b="inp.discount"></label>
+            <label for="notes">Ghi chú và điều khoản (hiện cuối báo giá)<textarea id="notes" rows="3" data-b="inp.notes" placeholder="Ví dụ: Báo giá có hiệu lực 15 ngày. Thanh toán 50% khi ký, 50% khi nghiệm thu."></textarea></label>
+          </div>
+        </div>
+      </details>
+      <div class="toolbar">
+        <button type="button" class="btn primary" id="pdfBtn">Xuất PDF</button>
+        <button type="button" class="btn" id="copyBtn">Sao chép nội dung</button>
+        <span class="grow"></span>
+        <button type="button" class="btn" id="toggleDetail" aria-pressed="false">Hiện chi tiết vật tư</button>
+      </div>
+      <main class="sheet" id="sheet" aria-live="polite"></main>
+    </div>
+  </section>
+
+  <!-- 3. THÔNG SỐ -->
+  <section id="p-thong-so" role="tabpanel" hidden>
+    <div class="two">
+      <div class="panel" style="display:grid;gap:22px">
+        <fieldset>
+          <legend>Thông số hệ thống</legend>
+          <div class="cols">
+            <label for="effInv">Hiệu suất inverter (%)<input id="effInv" type="number" min="1" max="100" data-b="ts.effInv"></label>
+            <label for="effPv">Hiệu suất tấm pin (%)<input id="effPv" type="number" min="1" max="100" data-b="ts.effPv"></label>
+            <label for="loss">Tổn hao dây dẫn (%)<input id="loss" type="number" min="0" max="50" data-b="ts.loss"></label>
+            <label for="sun">Số giờ nắng mỗi ngày (4 – 5,5 giờ)<input id="sun" type="number" min="3" max="7" step="0.1" data-b="ts.sun"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Giá điện EVN</legend>
+          <div class="cols" id="tiers"></div>
+          <label for="vat" style="max-width:260px">VAT (%)<input id="vat" type="number" min="0" max="20" data-b="ts.vat"></label>
+        </fieldset>
+      </div>
+      <aside class="panel"><dl class="stat" id="stats"></dl></aside>
+    </div>
+  </section>
+
+  <!-- 4. SL VẬT TƯ -->
+  <section id="p-vat-tu-sl" role="tabpanel" class="internal" hidden>
+    <div class="panel">
+      <div class="scroll"><table class="q" style="min-width:860px"><thead><tr><th>STT</th><th>Tên thiết bị</th><th>ĐVT</th><th class="n">SL</th><th class="n">Giá nhập</th><th class="n">Tiền nhập</th><th class="n">Giá xuất</th><th class="n">Tiền xuất</th></tr></thead><tbody id="bom"></tbody></table></div>
+      <div class="profit"><span>Tiền lãi dự kiến (gồm công lắp đặt, vận chuyển và các phí khác)</span><span id="profit"></span></div>
+    </div>
+  </section>
+
+  <!-- 5-8. BẢNG GIÁ -->
+  <section id="p-tam-pv" role="tabpanel" class="internal" hidden><div class="panel"><div class="scroll"><table class="cat" id="t-pv"></table></div><div class="cat-foot"><button type="button" class="btn" data-add="pv">Thêm tấm pin</button></div></div></section>
+  <section id="p-inverter" role="tabpanel" class="internal" hidden><div class="panel"><div class="scroll"><table class="cat" id="t-inv"></table></div><div class="cat-foot"><button type="button" class="btn" data-add="inv">Thêm inverter</button></div></div></section>
+  <section id="p-pin" role="tabpanel" class="internal" hidden><div class="panel"><div class="scroll"><table class="cat" id="t-bat"></table></div><div class="cat-foot"><button type="button" class="btn" data-add="bat">Thêm pin lưu trữ</button></div></div></section>
+  <section id="p-bang-gia-vt" role="tabpanel" class="internal" hidden><div class="panel"><div class="scroll"><table class="cat" id="t-vt" style="min-width:640px"></table></div><div class="cat-foot"><button type="button" class="btn" data-add="vt">Thêm vật tư</button><span class="hint">Mỗi nhóm vật tư dùng trong tính toán cần giữ lại ít nhất một dòng.</span></div></div></section>
+
+  <div class="cat-foot internal" style="justify-content:flex-end"><span class="hint" id="resetMsg">Mọi thay đổi được lưu tự động.</span><button type="button" class="btn danger" id="resetBtn">Khôi phục dữ liệu mặc định</button></div>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <div class="t"><small>Tổng cộng</small><strong id="dTotal"></strong></div>
+    <div class="acts"><button type="button" class="btn" id="copyBtn2">Sao chép</button><button type="button" class="btn primary" id="pdfBtn2">Xuất PDF</button></div>
+  </div>
+</div>
+<datalist id="dl"></datalist>
+<textarea id="copyArea" class="sr" aria-hidden="true" tabindex="-1"></textarea>
+<div class="pdfhost force-light" id="pdfHost" aria-hidden="true"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+  var f1 = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  var f2 = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var money = function (v) { return fmt.format(Math.round(v || 0)); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var N = function (v) { v = parseFloat(v); return isFinite(v) && v > 0 ? v : 0; };
+
+  /* ---------- dữ liệu mặc định (từ file Excel) ---------- */
+  function defaults() {
+    return {
+      inp: { mode: 'money', money: 2000000, kwh: 625, day: 40, cut: 80, pv: 'LR7-72HGD-620M', inv: 'auto', bat: 'auto', batQty: 0,
+        sel: { cab: 'Tủ điện HL-24WAY', ats: 'ATS 100A LWR', duct: 'Máng điện 8cm' },
+        cust: 'Anh Nguyễn Văn A', addr: 'Quận 9, TP. Hồ Chí Minh', seller: 'Phạm Văn Hiếu',
+        wDc: 30, wCad: 5, wAwg: 1, fInstall: 0, fTransport: 800000, fCab: 0, fWire: 0, discount: 0, notes: '' },
+      ts: { effInv: 86, effPv: 95, loss: 2, sun: 5, vat: 8, tiers: [1984, 2050, 2380, 2998, 3350, 3460] },
+      cat: {
+        pv: [
+          { b: 'LONGi', m: 'LR7-72HGD-620M', voc: 52.77, imp: 13.99, w: 620, d: 'N-type, 2 mặt kính, 33,5 kg, 2382×1134×30 mm', cost: 2270000, p: 2470000 },
+          { b: 'LONGi', m: 'LR5-72HPH-545M', voc: 49.65, imp: 13.04, w: 545, d: 'Mono, 2 mặt kính, 27,2 kg, 2256×1133×35 mm', cost: 2190000, p: 2390000 },
+          { b: 'JinkoSolar', m: 'JK-620', voc: 49.08, imp: 15.22, w: 620, d: 'N-type, 2 mặt kính, 32,4 kg, 2382×1134×30 mm', cost: 2350000, p: 2550000 },
+          { b: 'JinkoSolar', m: 'JK-580', voc: 53.3, imp: 12.96, w: 580, d: 'P-type, 2 mặt kính, 30,93 kg, 2411×1134×35 mm', cost: 2250000, p: 2450000 }
+        ],
+        inv: [
+          { b: 'LuxPower', m: 'SNA5000 WPV', ac: 5, mppt: 2, pvMax: 8, d: 'Hybrid 1 pha, pin 48 V, IP20', cost: 12200000, p: 15200000 },
+          { b: 'LuxPower', m: 'SNA6000 WPV', ac: 6, mppt: 2, pvMax: 9.6, d: 'Hybrid 1 pha, pin 48 V, IP20', cost: 14700000, p: 17700000 },
+          { b: 'LuxPower', m: 'SNA PRO 6.5K', ac: 6.5, mppt: 2, pvMax: 12, d: 'Hybrid 1 pha, pin 48 V, IP65', cost: 15300000, p: 18300000 },
+          { b: 'LuxPower', m: 'LXP 12K', ac: 12, mppt: 3, pvMax: 18, d: 'Hybrid split-phase, pin 48 V, IP65', cost: 41900000, p: 45900000 },
+          { b: 'LuxPower', m: 'GEN2 14K', ac: 14, mppt: 3, pvMax: 18, d: 'Hybrid 1 pha, pin điện áp thấp, IP66', cost: 45200000, p: 49200000 }
+        ],
+        bat: [
+          { b: 'Dyness', m: 'DYNESS-5.12K', ah: 100, kwh: 5.12, d: 'LiFePO4, 50 kg, IP20, có bình dập lửa Aerosol', cost: 18500000, p: 21500000 },
+          { b: 'BSB', m: 'BSB-10.24K', ah: 200, kwh: 10.24, d: 'LiFePO4, 100 kg, IP20, cell EVE Grade A', cost: 26000000, p: 29000000 },
+          { b: 'SVE', m: 'SVE-16.6K', ah: 324, kwh: 16.6, d: 'LiFePO4, 125 kg, IP65, trên 6000 chu kỳ', cost: 36000000, p: 39000000 }
+        ],
+        vt: [
+          { kind: 'dc', m: 'Dây Leader DC đen + đỏ 4mm', u: 'mét', cost: 20000, p: 25000 },
+          { kind: 'awg', m: 'Dây cáp PIN AWG4 đen + đỏ', u: 'mét', cost: 156000, p: 176000 },
+          { kind: 'cad', m: 'Dây Cadivi 6.0 xanh + đỏ', u: 'mét', cost: 37000, p: 42000 },
+          { kind: 'edge', m: 'Kẹp biên', u: 'cái', cost: 12500, p: 18000 },
+          { kind: 'mid', m: 'Kẹp giữa', u: 'cái', cost: 12500, p: 18000 },
+          { kind: 'rail', m: 'Ray 30mm', u: 'cái', cost: 30000, p: 35000 },
+          { kind: 'duct', m: 'Máng điện 8cm', u: 'mét', cost: 90000, p: 100000 },
+          { kind: 'duct', m: 'Máng điện 45x45', u: 'mét', cost: 37200, p: 42200 },
+          { kind: 'ats', m: 'ATS 100A LWR', u: 'bộ', cost: 525000, p: 575000 },
+          { kind: 'ats', m: 'ATS 4P 125A', u: 'cái', cost: 755000, p: 899000 },
+          { kind: 'mcbDc', m: 'MCB DC 2P (PV)', u: 'cái', cost: 81000, p: 95000 },
+          { kind: 'mcbAc', m: 'MCB AC 2P', u: 'cái', cost: 64000, p: 84000 },
+          { kind: 'spdDc', m: 'Chống sét DC', u: 'cái', cost: 135000, p: 145000 },
+          { kind: 'spdAc', m: 'Chống sét AC', u: 'cái', cost: 89000, p: 109000 },
+          { kind: 'cab', m: 'Tủ điện HL-24WAY', u: 'cái', cost: 255000, p: 320000 },
+          { kind: 'cab', m: 'Tủ điện 600x400x200', u: 'cái', cost: 1059000, p: 1259000 },
+          { kind: 'mc4', m: 'Đầu nối MC4', u: 'cặp', cost: 15000, p: 20000 }
+        ]
+      },
+      lines: []
+    };
+  }
+  var KIND = { dc: 'Dây DC', awg: 'Cáp pin', cad: 'Dây Cadivi', edge: 'Gá lắp', mid: 'Gá lắp', rail: 'Gá lắp', duct: 'Máng điện', ats: 'ATS', mcbDc: 'Tủ điện', mcbAc: 'Tủ điện', spdDc: 'Tủ điện', spdAc: 'Tủ điện', cab: 'Tủ điện', mc4: 'Đầu nối', other: 'Khác' };
+  var TIER_LIM = [50, 100, 200, 300, 400, Infinity];
+  var TIER_LBL = ['Bậc 1: 0 – 50 kWh', 'Bậc 2: 51 – 100 kWh', 'Bậc 3: 101 – 200 kWh', 'Bậc 4: 201 – 300 kWh', 'Bậc 5: 301 – 400 kWh', 'Bậc 6: từ 401 kWh'];
+
+  var state = defaults();
+  var KEY = 'nlmt-bao-gia-v2';
+  try { var ls = localStorage.getItem(KEY); if (ls) merge(JSON.parse(ls)); } catch (e) {}
+  function merge(s) {
+    var d = defaults();
+    state = {
+      inp: Object.assign(d.inp, s.inp || {}, { sel: Object.assign(d.inp.sel, (s.inp || {}).sel || {}) }),
+      ts: Object.assign(d.ts, s.ts || {}),
+      cat: Object.assign(d.cat, s.cat || {}),
+      lines: s.lines || []
+    };
+    if (!state.ts.tiers || state.ts.tiers.length !== 6) state.ts.tiers = d.ts.tiers;
+  }
+
+  /* ---------- lưu trữ (db dùng chung, dự phòng localStorage) ---------- */
+  var ref = null, saveT = 0;
+  function setSync(t) { $('sync').textContent = t; }
+  function persist() {
+    clearTimeout(saveT);
+    saveT = setTimeout(function () {
+      var s = JSON.stringify(state);
+      try { localStorage.setItem(KEY, s); } catch (e) {}
+      if (ref) ref.set({ json: s }).then(function () { setSync('Đã lưu'); }, function () { setSync('Chỉ lưu trên máy này'); });
+      else setSync('Chỉ lưu trên máy này');
+    }, 500);
+  }
+  if (window.claude && claude.use) {
+    claude.use('db').then(function (db) {
+      if (!db) return;
+      ref = db.doc('quote/state');
+      return ref.get().then(function (snap) {
+        if (snap.exists && snap.data() && snap.data().json) {
+          try { merge(JSON.parse(snap.data().json)); fullRender(); setSync('Đã lưu'); } catch (e) {}
+        } else { persist(); }
+      });
+    }).catch(function () {});
+  }
+
+  /* ---------- tính toán ---------- */
+  function tierCost(kwh, tp) {
+    var cost = 0, prev = 0;
+    for (var i = 0; i < 6 && kwh > prev; i++) { cost += (Math.min(kwh, TIER_LIM[i]) - prev) * tp[i]; prev = TIER_LIM[i]; }
+    return cost;
+  }
+  function tierKwh(cost, tp) {
+    var kwh = 0, prev = 0;
+    for (var i = 0; i < 6; i++) {
+      var span = TIER_LIM[i] - prev;
+      if (span === Infinity || cost <= span * tp[i]) return kwh + (tp[i] ? cost / tp[i] : 0);
+      cost -= span * tp[i]; kwh += span; prev = TIER_LIM[i];
+    }
+    return kwh;
+  }
+  function vt(kind) {
+    var rows = state.cat.vt.filter(function (r) { return r.kind === kind; });
+    var sel = state.inp.sel[kind];
+    return rows.find(function (r) { return r.m === sel; }) || rows[0] || { m: kind, u: '', cost: 0, p: 0 };
+  }
+
+  function calc() {
+    var I = state.inp, T = state.ts, C = state.cat;
+    var tp = T.tiers.map(N), vat = N(T.vat) / 100;
+    var effInv = N(T.effInv) / 100, effPv = N(T.effPv) / 100, loss = N(T.loss) / 100, sun = N(T.sun);
+    var pv = C.pv.find(function (x) { return x.m === I.pv; }) || C.pv[0];
+    var bill, kwhMonth;
+    if (I.mode === 'kwh') { kwhMonth = N(I.kwh); bill = tierCost(kwhMonth, tp) * (1 + vat); }
+    else { bill = N(I.money); kwhMonth = tierKwh(bill / (1 + vat), tp); }
+    var cutKwh = kwhMonth * N(I.cut) / 100, perDay = cutKwh / 30;
+    var perPanel = (N(pv.w) / 1000) * effPv * effInv * (1 - loss) * sun;
+    var n = perPanel > 0 ? Math.ceil(perDay / perPanel - 1e-9) : 0;
+    var kwp = n * N(pv.w) / 1000;
+    var batNeed = perDay * (100 - N(I.day)) / 100;
+    var warns = [];
+
+    var inv;
+    var fits = C.inv.filter(function (i) { return N(i.pvMax) >= kwp; });
+    if (I.inv === 'auto') {
+      inv = fits.sort(function (a, b) { return N(a.p) - N(b.p); })[0];
+      if (!inv) { inv = C.inv.slice().sort(function (a, b) { return N(b.pvMax) - N(a.pvMax); })[0]; warns.push('Công suất pin ' + f2.format(kwp) + ' kWp vượt giới hạn của inverter lớn nhất (' + inv.pvMax + ' kWp). Cần dùng nhiều inverter.'); }
+    } else {
+      inv = C.inv.find(function (x) { return x.m === I.inv; }) || C.inv[0];
+      if (N(inv.pvMax) < kwp) warns.push('Inverter ' + inv.m + ' chỉ nhận tối đa ' + inv.pvMax + ' kWp, hệ thống cần ' + f2.format(kwp) + ' kWp.');
+    }
+    var bat = null, batQty = 0;
+    if (I.bat === 'auto') {
+      if (batNeed > 0.05) {
+        bat = C.bat.filter(function (b) { return N(b.kwh) >= batNeed; }).sort(function (a, b) { return N(a.kwh) - N(b.kwh); })[0]; batQty = 1;
+        if (!bat) { bat = C.bat.slice().sort(function (a, b) { return N(b.kwh) - N(a.kwh); })[0]; batQty = Math.ceil(batNeed / N(bat.kwh)); }
+      }
+    } else if (I.bat !== 'none') {
+      bat = C.bat.find(function (x) { return x.m === I.bat; }) || C.bat[0]; batQty = 1;
+    }
+    if (bat) {
+      if (N(I.batQty) > 0) batQty = Math.floor(N(I.batQty));
+      if (N(bat.kwh) * batQty < batNeed * 0.95) warns.push('Pin lưu trữ ' + bat.m + ' x' + batQty + ' (' + f2.format(N(bat.kwh) * batQty) + ' kWh) thấp hơn nhu cầu ' + f2.format(batNeed) + ' kWh.');
+    }
+    if (n > 48) warns.push('Số tấm vượt 48 tấm, ngoài phạm vi bảng vật tư mẫu. Cần thiết kế riêng.');
+
+    var strings = Math.ceil(n / 8), q = {
+      dc: N(I.wDc), awg: N(I.wAwg), cad: N(I.wCad), duct: 1, mc4: strings,
+      edge: 4 * strings, mid: Math.max(0, n * 2 - 2), rail: n ? n * 2 + 2 : 0,
+      mcbDc: n <= 8 ? 1 : n <= 16 ? 2 : 3, mcbAc: 4, spdDc: n <= 8 ? 1 : n <= 16 ? 2 : 3, spdAc: 1, cab: 1, ats: 1
+    };
+    var bom = [{ name: pv.m, u: 'Tấm', qty: n, cost: N(pv.cost), p: N(pv.p) }, { name: inv.m, u: 'Bộ', qty: 1, cost: N(inv.cost), p: N(inv.p) }];
+    if (bat) bom.push({ name: bat.m, u: 'Bộ', qty: batQty, cost: N(bat.cost), p: N(bat.p) });
+    var G = { cable: ['dc', 'awg', 'cad', 'duct', 'mc4'], rack: ['edge', 'mid', 'rail'], cab: ['mcbDc', 'mcbAc', 'spdDc', 'spdAc', 'cab', 'ats'] };
+    Object.keys(G).forEach(function (g) {
+      G[g].forEach(function (k) { var r = vt(k); bom.push({ name: r.m, u: r.u, qty: q[k], cost: N(r.cost), p: N(r.p), g: g }); });
+    });
+    var fee = { install: N(I.fInstall), transport: N(I.fTransport), cab: N(I.fCab), wire: N(I.fWire) };
+    var gsum = function (g) { return bom.filter(function (r) { return r.g === g; }).reduce(function (s, r) { return s + r.qty * r.p; }, 0); };
+    var detail = function (g, extra) { return bom.filter(function (r) { return r.g === g && r.qty; }).map(function (r) { return [r.name, r.u, r.qty, r.p]; }).concat(extra || []); };
+    var cableT = fee.wire + gsum('cable'), rackT = gsum('rack'), cabT = fee.cab + gsum('cab'), laborT = fee.install + fee.transport;
+    var items = [
+      { name: pv.m, sub: (pv.b || '') + ' · ' + (pv.d || ''), mono: 1, u: 'Tấm', qty: n, price: N(pv.p), total: n * N(pv.p), warr: '12 năm (theo nhà sản xuất)' },
+      { name: inv.m, sub: (inv.b || '') + ' hybrid ' + inv.ac + ' kW, tối đa ' + inv.pvMax + ' kWp', mono: 1, u: 'Bộ', qty: 1, price: N(inv.p), total: N(inv.p), warr: '3 năm' }
+    ];
+    if (bat) items.push({ name: bat.m, sub: (bat.b || '') + ' LiFePO4 ' + bat.kwh + ' kWh · tổng ' + f2.format(N(bat.kwh) * batQty) + ' kWh', batEdit: 1, mono: 1, u: 'Bộ', qty: batQty, price: N(bat.p), total: N(bat.p) * batQty, warr: '5 năm' });
+    items.push(
+      { name: 'Dây Leader DC đỏ-đen 4mm, cáp pin AWG4, dây Cadivi, máng điện, vật tư phụ, đầu nối MC4...', u: 'Toàn bộ', qty: 1, price: cableT, total: cableT, detail: detail('cable', fee.wire ? [['Phí phát sinh dây dẫn', '', 1, fee.wire]] : []) },
+      { name: 'Gá lắp tấm pin năng lượng mặt trời', u: 'Bộ', qty: 1, price: rackT, total: rackT, detail: detail('rack') },
+      { name: 'Tủ điện, ATS chuyển nguồn, CB DC, CB AC, chống sét DC/AC...', u: 'Bộ', qty: 1, price: cabT, total: cabT, warr: '1 năm', detail: detail('cab', fee.cab ? [['Lắp tủ điện và bảo hành', '', 1, fee.cab]] : []) },
+      { name: 'Công vận chuyển, lắp đặt trên mái', u: '', qty: '', price: laborT, total: laborT, detail: [['Vận chuyển', '', 1, fee.transport]].concat(fee.install ? [['Công lắp đặt trên mái', '', 1, fee.install]] : []) }
+    );
+    var customCost = 0;
+    state.lines.forEach(function (l) {
+      var qn = N(l.qty), pr = N(l.price);
+      items.push({ name: l.name || '(chưa đặt tên)', u: l.u, qty: l.qty === '' ? '' : qn, price: pr, total: qn * pr, warr: l.warr, custom: 1 });
+      customCost += qn * N(l.cost);
+      bom.push({ name: l.name || '(chưa đặt tên)', u: l.u, qty: qn, cost: N(l.cost), p: pr, custom: 1 });
+    });
+    var disc = N(I.discount);
+    if (disc) items.push({ name: 'Chiết khấu', u: '', qty: '', price: -disc, total: -disc, neg: 1 });
+    var total = items.reduce(function (s, r) { return s + r.total; }, 0);
+    var save = tierCost(cutKwh, tp) * (1 + vat);
+    var sNhap = bom.reduce(function (s, r) { return s + r.qty * r.cost; }, 0), sXuat = bom.reduce(function (s, r) { return s + r.qty * r.p; }, 0);
+    var profit = sXuat - sNhap + fee.install + fee.transport + fee.cab + fee.wire - disc;
+    return { pv: pv, inv: inv, bat: bat, batQty: batQty, n: n, kwp: kwp, bill: bill, kwhMonth: kwhMonth, cutKwh: cutKwh, perDay: perDay, batNeed: batNeed,
+      items: items, bom: bom, total: total, save: save, payback: save > 0 ? total / (save * 12) : 0, profit: profit, sNhap: sNhap, sXuat: sXuat, warns: warns,
+      effPv: effPv };
+  }
+
+  /* ---------- hiển thị ---------- */
+  var R = null, showDetail = false;
+  function kpiHTML(r) {
+    return '<div class="kpi"><small>Công suất hệ thống</small><strong>' + f2.format(r.kwp) + '<em>kWp</em></strong></div>' +
+      '<div class="kpi"><small>Số tấm pin</small><strong>' + r.n + '<em>tấm ' + N(r.pv.w) + ' Wp</em></strong></div>' +
+      '<div class="kpi"><small>Giảm tiền điện mỗi tháng</small><strong>' + money(r.save) + '<em>đ</em></strong></div>' +
+      '<div class="kpi key"><small>Thời gian thu hồi vốn</small><strong>' + (r.save > 0 ? f1.format(r.payback) + '<em>năm</em>' : '—') + '</strong></div>';
+  }
+  function cmpHTML(r) {
+    var after = Math.max(0, r.bill - r.save), w = Math.max(1, after / Math.max(r.bill, 1) * 100);
+    return '<h3 class="cap">Tiền điện mỗi tháng</h3>' +
+      '<div class="bar"><span>Hiện tại</span><div class="track"><div class="fill before" style="width:100%"></div></div><b>' + money(r.bill) + ' đ</b></div>' +
+      '<div class="bar"><span>Sau khi lắp</span><div class="track"><div class="fill after" style="width:' + w + '%"></div></div><b>' + money(after) + ' đ</b></div>';
+  }
+  function usageText(r) {
+    return 'Dùng khoảng ' + f1.format(r.kwhMonth) + ' kWh mỗi tháng, hệ thống cần bù ' + f1.format(r.cutKwh) + ' kWh (' + f1.format(r.perDay) + ' kWh mỗi ngày). Pin lưu trữ cần khoảng ' + f1.format(r.batNeed) + ' kWh.';
+  }
+  function rowsHTML(r, pdf) {
+    var h = '', i = 0;
+    r.items.forEach(function (it) {
+      i++;
+      h += '<tr' + (it.neg ? ' class="neg"' : '') + '><td class="stt">' + i + '</td><td><span class="' + (it.mono ? 'model' : '') + '">' + esc(it.name) + '</span>' + (it.sub ? '<span class="sub">' + esc(it.sub) + '</span>' : '') +
+        '</td><td>' + esc(it.u) + '</td><td class="n">' + (it.batEdit && !pdf ? '<span class="qty"><button type="button" class="qb" data-batqty="-1" aria-label="Giảm số lượng pin">−</button><input id="batQtyIn" type="number" min="1" step="1" value="' + it.qty + '" aria-label="Số lượng pin lưu trữ"><button type="button" class="qb" data-batqty="1" aria-label="Tăng số lượng pin">+</button></span>' : it.qty) + '</td><td class="n">' + (it.neg ? '−' + money(-it.price) : money(it.price)) + '</td><td class="n">' + (it.neg ? '−' + money(-it.total) : money(it.total)) + '</td><td>' + esc(it.warr || '') + '</td></tr>';
+      if (showDetail && it.detail) it.detail.forEach(function (s) {
+        if (!s[2]) return;
+        h += '<tr class="sub"><td></td><td>' + esc(s[0]) + '</td><td>' + esc(s[1]) + '</td><td class="n">' + s[2] + '</td><td class="n">' + money(s[3]) + '</td><td class="n">' + money(s[2] * s[3]) + '</td><td></td></tr>';
+      });
+    });
+    return h + '<tr class="total"><td></td><td colspan="4">TỔNG CỘNG</td><td class="n sum">' + money(r.total) + '</td><td></td></tr>';
+  }
+  function sheetHTML(r, pdf) {
+    var I = state.inp, d = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return '<div class="sheet-head"><h2>Bảng dự toán thi công hệ thống điện năng lượng mặt trời</h2><dl class="meta">' +
+      '<div><dt>Khách hàng</dt><dd>' + esc(I.cust || '—') + '</dd></div><div><dt>Địa chỉ lắp đặt</dt><dd>' + esc(I.addr || '—') + '</dd></div><div><dt>Ngày lập</dt><dd>' + d + '</dd></div></dl></div>' +
+      '<div class="kpis">' + kpiHTML(r) + '</div>' +
+      '<section class="compare">' + cmpHTML(r) + '<p class="usage">' + usageText(r) + '</p></section>' +
+      '<section class="tablewrap"><h3 class="cap">Vật tư và thiết bị</h3><div class="scroll"><table class="q"><thead><tr><th>STT</th><th>Tên thiết bị</th><th>ĐVT</th><th class="n">SL</th><th class="n">Đơn giá</th><th class="n">Thành tiền (đ)</th><th>Bảo hành</th></tr></thead><tbody>' + rowsHTML(r, pdf) + '</tbody></table></div>' +
+      (pdf ? '' : r.warns.map(function (w) { return '<div class="notice">' + esc(w) + '</div>'; }).join('')) +
+      (I.notes ? '<p class="terms">' + esc(I.notes) + '</p>' : '') + '</section>' +
+      '<div class="sign"><div><b>Người bán</b><small>(Ký, ghi rõ họ tên)</small><div class="space"></div><div class="name">' + esc(I.seller) + '</div></div><div><b>Người mua</b><small>(Ký, ghi rõ họ tên)</small><div class="space"></div><div class="name"></div></div></div>';
+  }
+  function bomHTML(r) {
+    var h = '';
+    r.bom.forEach(function (x, i) {
+      h += '<tr><td class="stt">' + (i + 1) + '</td><td>' + esc(x.name) + '</td><td>' + esc(x.u) + '</td><td class="n">' + x.qty + '</td><td class="n">' + money(x.cost) + '</td><td class="n">' + money(x.cost * x.qty) + '</td><td class="n">' + money(x.p) + '</td><td class="n">' + money(x.p * x.qty) + '</td></tr>';
+    });
+    return h + '<tr class="total"><td></td><td colspan="4">TỔNG CỘNG</td><td class="n">' + money(r.sNhap) + '</td><td></td><td class="n">' + money(r.sXuat) + '</td></tr>';
+  }
+  function statsHTML(r) {
+    var row = function (a, b) { return '<dt>' + a + '</dt><dd>' + b + '</dd>'; };
+    return '<h3 class="cap" style="margin-top:0">Khi chưa lắp điện mặt trời</h3>' +
+      row('Tiền điện mỗi tháng', money(r.bill) + ' đ') + row('Số kWh mỗi tháng', f1.format(r.kwhMonth)) + row('Số kWh mỗi ngày', f1.format(r.kwhMonth / 30)) + row('Công suất tải trung bình', f2.format(r.kwhMonth / 30 / 24) + ' kW') +
+      '<h3 class="cap">Thông số dự kiến sau khi lắp</h3>' +
+      row('Số kWh mỗi tháng cần giảm', f1.format(r.cutKwh)) + row('Số kWh mỗi ngày cần giảm', f1.format(r.perDay)) + row('Số tấm pin cần lắp', r.n) + row('Công suất hệ (kWp)', f2.format(r.kwp)) +
+      row('Công suất PV tối đa đã trừ hiệu suất (kWp)', f2.format(r.kwp * r.effPv)) + row('Dung lượng pin lưu trữ cần (kWh)', f2.format(r.batNeed)) +
+      row('Tiền điện giảm mỗi tháng (có VAT)', money(r.save) + ' đ') + row('Thời gian thu hồi vốn', r.save > 0 ? f1.format(r.payback) + ' năm' : '—');
+  }
+
+  function renderOut() {
+    R = calc();
+    $('kpiA').innerHTML = kpiHTML(R); $('cmpA').innerHTML = cmpHTML(R); $('usageA').textContent = usageText(R);
+    $('qTotal').textContent = money(R.total) + ' đ'; $('dTotal').textContent = money(R.total) + ' đ';
+    $('sheet').innerHTML = sheetHTML(R);
+    $('bom').innerHTML = bomHTML(R); $('profit').textContent = money(R.profit) + ' đ';
+    $('stats').innerHTML = statsHTML(R);
+    $('dayV').textContent = N(state.inp.day) + '%'; $('cutV').textContent = N(state.inp.cut) + '%';
+  }
+
+  /* ---------- liên kết ô nhập với state ---------- */
+  function getPath(p) { return p.split('.').reduce(function (o, k) { return o[k]; }, state); }
+  function setPath(p, v) { var a = p.split('.'), last = a.pop(); a.reduce(function (o, k) { return o[k]; }, state)[last] = v; }
+  function syncForm() {
+    document.querySelectorAll('[data-b]').forEach(function (el) { var v = getPath(el.dataset.b); if (v !== undefined) el.value = v; });
+    var m = state.inp.mode;
+    $('mMoney').setAttribute('aria-pressed', m === 'money'); $('mKwh').setAttribute('aria-pressed', m === 'kwh');
+    $('lMoney').hidden = m !== 'money'; $('lKwh').hidden = m !== 'kwh';
+  }
+  document.addEventListener('input', function (e) {
+    var el = e.target, p = el.dataset && el.dataset.b;
+    if (!p) return;
+    setPath(p, el.type === 'number' || el.type === 'range' ? (el.value === '' ? 0 : parseFloat(el.value)) : el.value);
+    persist(); renderOut();
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target.dataset && e.target.dataset.b) {
+      if (e.target.dataset.b === 'inp.bat') { state.inp.batQty = 0; syncForm(); }
+      persist(); renderOut();
+    }
+  });
+  function setBatQty(v) { state.inp.batQty = Math.max(1, Math.floor(v) || 1); syncForm(); persist(); renderOut(); }
+  $('sheet').addEventListener('change', function (e) { if (e.target.id === 'batQtyIn') setBatQty(parseFloat(e.target.value)); });
+  $('sheet').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-batqty]'); if (!b || !R) return;
+    setBatQty(R.batQty + parseInt(b.dataset.batqty, 10));
+    var i = $('batQtyIn'); if (i) i.focus();
+  });
+
+  function fillSelects() {
+    var C = state.cat, opt = function (v, t) { return '<option value="' + esc(v) + '">' + esc(t) + '</option>'; };
+    $('pv').innerHTML = C.pv.map(function (x) { return opt(x.m, (x.b ? x.b + ' ' : '') + x.m + ' (' + N(x.w) + ' Wp)'); }).join('');
+    $('inv').innerHTML = opt('auto', 'Tự chọn theo công suất') + C.inv.map(function (x) { return opt(x.m, (x.b ? x.b + ' ' : '') + x.m + ' (' + x.ac + ' kW)'); }).join('');
+    $('bat').innerHTML = opt('auto', 'Tự chọn theo nhu cầu') + opt('none', 'Không dùng pin') + C.bat.map(function (x) { return opt(x.m, (x.b ? x.b + ' ' : '') + x.m + ' (' + x.kwh + ' kWh)'); }).join('');
+    [['sCab', 'cab'], ['sAts', 'ats'], ['sDuct', 'duct']].forEach(function (a) {
+      $(a[0]).innerHTML = C.vt.filter(function (r) { return r.kind === a[1]; }).map(function (r) { return opt(r.m, r.m); }).join('');
+    });
+    var dl = {};
+    C.pv.forEach(function (x) { dl[x.m] = { u: 'Tấm', p: x.p, cost: x.cost }; });
+    C.inv.forEach(function (x) { dl[x.m] = { u: 'Bộ', p: x.p, cost: x.cost }; });
+    C.bat.forEach(function (x) { dl[x.m] = { u: 'Bộ', p: x.p, cost: x.cost }; });
+    C.vt.forEach(function (x) { dl[x.m] = { u: x.u, p: x.p, cost: x.cost }; });
+    dlMap = dl;
+    $('dl').innerHTML = Object.keys(dl).map(function (k) { return '<option value="' + esc(k) + '">'; }).join('');
+  }
+  var dlMap = {};
+
+  /* ---------- bảng giá sửa trực tiếp ---------- */
+  var SCHEMA = {
+    pv: [['b', 'Thương hiệu'], ['m', 'Model'], ['voc', 'Voc (V)', 1], ['imp', 'Imp (A)', 1], ['w', 'Công suất (Wp)', 1], ['d', 'Mô tả'], ['cost', 'Giá nhập', 1, 1], ['p', 'Giá xuất', 1]],
+    inv: [['b', 'Thương hiệu'], ['m', 'Model'], ['ac', 'Công suất AC (kW)', 1], ['mppt', 'Số MPPT', 1], ['pvMax', 'PV tối đa (kWp)', 1], ['d', 'Mô tả'], ['cost', 'Giá nhập', 1, 1], ['p', 'Giá xuất', 1]],
+    bat: [['b', 'Thương hiệu'], ['m', 'Model'], ['ah', 'Dung lượng (Ah)', 1], ['kwh', 'Năng lượng (kWh)', 1], ['d', 'Mô tả'], ['cost', 'Giá nhập', 1, 1], ['p', 'Giá xuất', 1]],
+    vt: [['kind', 'Nhóm', 0, 0, 1], ['m', 'Tên vật tư'], ['u', 'ĐVT'], ['cost', 'Giá nhập', 1, 1], ['p', 'Giá xuất', 1]]
+  };
+  var BLANK = {
+    pv: { b: '', m: 'Model mới', voc: 0, imp: 0, w: 0, d: '', cost: 0, p: 0 }, inv: { b: '', m: 'Model mới', ac: 0, mppt: 0, pvMax: 0, d: '', cost: 0, p: 0 },
+    bat: { b: '', m: 'Model mới', ah: 0, kwh: 0, d: '', cost: 0, p: 0 }, vt: { kind: 'other', m: 'Vật tư mới', u: 'cái', cost: 0, p: 0 }
+  };
+  function renderCat(name) {
+    var cols = SCHEMA[name], rows = state.cat[name];
+    var h = '<thead><tr>' + cols.map(function (c) { return '<th class="' + (c[2] ? 'n' : '') + (c[3] ? ' internal' : '') + '">' + c[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
+    rows.forEach(function (r, i) {
+      var onlyOne = name === 'vt' ? (r.kind !== 'other' && rows.filter(function (x) { return x.kind === r.kind; }).length < 2) : rows.length < 2;
+      h += '<tr>' + cols.map(function (c) {
+        if (c[4]) return '<td class="k">' + esc(KIND[r[c[0]]] || r[c[0]]) + '</td>';
+        var isMoney = c[0] === 'cost' || c[0] === 'p';
+        return '<td><input class="' + (c[2] ? 'num ' : '') + 'f-' + c[0] + '" ' + (isMoney ? 'type="text" inputmode="numeric" data-money="1"' : c[2] ? 'type="number" step="any"' : 'type="text"') + ' value="' + esc(isMoney ? money(r[c[0]]) : r[c[0]]) + '" data-cat="' + name + '" data-i="' + i + '" data-f="' + c[0] + '" aria-label="' + esc(c[1]) + ' dòng ' + (i + 1) + '"></td>';
+      }).join('') + '<td><button type="button" class="xbtn" data-del="' + name + '" data-i="' + i + '" aria-label="Xóa dòng ' + (i + 1) + '" ' + (onlyOne ? 'disabled' : '') + '>×</button></td></tr>';
+    });
+    $('t-' + name).innerHTML = h + '</tbody>';
+  }
+  function renderAllCats() { ['pv', 'inv', 'bat', 'vt'].forEach(renderCat); }
+  document.addEventListener('input', function (e) {
+    var el = e.target; if (!el.dataset || !el.dataset.cat) return;
+    var row = state.cat[el.dataset.cat][+el.dataset.i], f = el.dataset.f, num = el.type === 'number';
+    if (el.dataset.money) row[f] = parseInt(el.value.replace(/\D/g, ''), 10) || 0;
+    else row[f] = num ? (el.value === '' ? 0 : parseFloat(el.value)) : el.value;
+    persist(); renderOut();
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target; if (!el.dataset || !el.dataset.cat) return;
+    if (el.dataset.money) el.value = money(state.cat[el.dataset.cat][+el.dataset.i][el.dataset.f]);
+    if (el.dataset.f === 'm' || el.dataset.f === 'b') { fillSelects(); syncForm(); renderOut(); }
+  });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-add],[data-del],[data-go]'); if (!t) return;
+    if (t.dataset.go) return go(t.dataset.go);
+    if (t.dataset.add) { state.cat[t.dataset.add].push(JSON.parse(JSON.stringify(BLANK[t.dataset.add]))); renderCat(t.dataset.add); fillSelects(); syncForm(); persist(); renderOut();
+      var ins = $('t-' + t.dataset.add).querySelectorAll('tbody tr:last-child input'); if (ins[1]) { ins[1].focus(); ins[1].select(); } return; }
+    if (t.dataset.del && !t.disabled) {
+      var n = t.dataset.del, row = state.cat[n].splice(+t.dataset.i, 1)[0];
+      if (n === 'pv' && state.inp.pv === row.m) state.inp.pv = state.cat.pv[0].m;
+      if (n === 'inv' && state.inp.inv === row.m) state.inp.inv = 'auto';
+      if (n === 'bat' && state.inp.bat === row.m) state.inp.bat = 'auto';
+      if (n === 'vt' && state.inp.sel[row.kind] === row.m) delete state.inp.sel[row.kind];
+      renderCat(n); fillSelects(); syncForm(); persist(); renderOut();
+    }
+  });
+
+  /* ---------- dòng thiết bị bổ sung ---------- */
+  function renderLines() {
+    var L = state.lines;
+    if (!L.length) { $('lines').innerHTML = '<span class="hint">Chưa có dòng bổ sung. Chọn "Thêm dòng thiết bị" để thêm vào báo giá.</span>'; return; }
+    $('lines').innerHTML = '<div class="line hd"><span>Tên thiết bị</span><span>ĐVT</span><span>SL</span><span>Đơn giá</span><span class="internal">Giá nhập</span><span>Bảo hành</span><span></span></div>' +
+      L.map(function (l, i) {
+        var a = ' data-line="' + i + '" ';
+        return '<div class="line"><label class="name"><span class="sr">Tên</span><input type="text" list="dl" value="' + esc(l.name) + '"' + a + 'data-f="name"></label>' +
+          '<label><span class="sr">ĐVT</span><input type="text" value="' + esc(l.u) + '"' + a + 'data-f="u"></label>' +
+          '<label><span class="sr">Số lượng</span><input type="number" min="0" value="' + esc(l.qty) + '"' + a + 'data-f="qty"></label>' +
+          '<label><span class="sr">Đơn giá</span><input type="number" min="0" step="1000" value="' + esc(l.price) + '"' + a + 'data-f="price"></label>' +
+          '<label class="internal"><span class="sr">Giá nhập</span><input type="number" min="0" step="1000" value="' + esc(l.cost) + '"' + a + 'data-f="cost"></label>' +
+          '<label><span class="sr">Bảo hành</span><input type="text" value="' + esc(l.warr) + '"' + a + 'data-f="warr"></label>' +
+          '<button type="button" class="xbtn" data-delline="' + i + '" aria-label="Xóa dòng ' + (i + 1) + '">×</button></div>';
+      }).join('');
+  }
+  $('lines').addEventListener('input', function (e) {
+    var el = e.target, i = el.dataset.line; if (i === undefined) return;
+    var f = el.dataset.f; state.lines[+i][f] = el.type === 'number' ? (el.value === '' ? 0 : parseFloat(el.value)) : el.value;
+    persist(); renderOut();
+  });
+  $('lines').addEventListener('change', function (e) {
+    var el = e.target; if (el.dataset.f !== 'name') return;
+    var hit = dlMap[el.value], l = state.lines[+el.dataset.line];
+    if (hit) { l.u = hit.u; l.price = hit.p; l.cost = hit.cost; renderLines(); persist(); renderOut(); }
+  });
+  $('lines').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-delline]'); if (!b) return;
+    state.lines.splice(+b.dataset.delline, 1); renderLines(); persist(); renderOut();
+  });
+  $('addLine').addEventListener('click', function () {
+    state.lines.push({ name: '', u: 'Cái', qty: 1, price: 0, cost: 0, warr: '' }); renderLines(); persist(); renderOut();
+    var ins = $('lines').querySelectorAll('.line'); var last = ins[ins.length - 1].querySelector('input'); last.focus();
+  });
+
+  /* ---------- tab ---------- */
+  var TABS = [['nhap-lieu', 'Nhập liệu'], ['bao-gia', 'Báo giá'], ['thong-so', 'Thông số'], ['vat-tu-sl', 'SL vật tư', 1], ['tam-pv', 'Tấm PV', 1], ['inverter', 'Inverter', 1], ['pin', 'Pin lưu trữ', 1], ['bang-gia-vt', 'Giá vật tư', 1]];
+  $('tabs').innerHTML = TABS.map(function (t) {
+    return '<button type="button" role="tab" id="tab-' + t[0] + '" data-tab="' + t[0] + '" aria-controls="p-' + t[0] + '" class="' + (t[2] ? 'internal' : '') + '">' + t[1] + '</button>';
+  }).join('');
+  var cur = 'nhap-lieu';
+  function show(id) {
+    if (!TABS.some(function (t) { return t[0] === id; })) id = 'nhap-lieu';
+    var internal = TABS.some(function (t) { return t[0] === id && t[2]; });
+    if (internal && document.body.classList.contains('present')) id = 'bao-gia';
+    cur = id;
+    TABS.forEach(function (t) { $('p-' + t[0]).hidden = t[0] !== id; $('tab-' + t[0]).setAttribute('aria-selected', t[0] === id); $('tab-' + t[0]).tabIndex = t[0] === id ? 0 : -1; });
+  }
+  function go(id) { if (location.hash.slice(1) === id) show(id); else location.hash = id; }
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
+  $('tabs').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var vis = TABS.filter(function (t) { return !(t[2] && document.body.classList.contains('present')); });
+    var i = vis.findIndex(function (t) { return t[0] === cur; });
+    var nx = vis[(i + (e.key === 'ArrowRight' ? 1 : vis.length - 1)) % vis.length][0]; go(nx); $('tab-' + nx).focus();
+  });
+  window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
+  $('presentBtn').addEventListener('click', function () {
+    var on = !document.body.classList.contains('present');
+    document.body.classList.toggle('present', on); this.setAttribute('aria-pressed', on); show(cur);
+  });
+
+  /* ---------- nút chung ---------- */
+  function setMode(m) { state.inp.mode = m; syncForm(); persist(); renderOut(); }
+  $('mMoney').addEventListener('click', function () { setMode('money'); });
+  $('mKwh').addEventListener('click', function () { setMode('kwh'); });
+  $('toggleDetail').addEventListener('click', function () { showDetail = !showDetail; this.setAttribute('aria-pressed', showDetail); this.textContent = showDetail ? 'Ẩn chi tiết vật tư' : 'Hiện chi tiết vật tư'; renderOut(); });
+  var resetArm = 0;
+  $('resetBtn').addEventListener('click', function () {
+    if (!resetArm) { resetArm = 1; this.textContent = 'Bấm lần nữa để xóa mọi chỉnh sửa'; setTimeout(function () { resetArm = 0; $('resetBtn').textContent = 'Khôi phục dữ liệu mặc định'; }, 4000); return; }
+    resetArm = 0; this.textContent = 'Khôi phục dữ liệu mặc định'; state = defaults(); fullRender(); persist(); toast('Đã khôi phục dữ liệu mặc định');
+  });
+  var toastT = 0;
+  function toast(t) { var el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { el.hidden = true; }, 2600); }
+
+  function copyText() {
+    var d = R, I = state.inp, L = [];
+    L.push('BẢNG DỰ TOÁN HỆ THỐNG ĐIỆN NĂNG LƯỢNG MẶT TRỜI', 'Khách hàng: ' + I.cust + ' | ' + I.addr, 'Hệ thống: ' + f2.format(d.kwp) + ' kWp (' + d.n + ' tấm ' + N(d.pv.w) + ' Wp)',
+      'Giảm tiền điện: ' + money(d.save) + ' đ/tháng | Thu hồi vốn: ' + f1.format(d.payback) + ' năm', '');
+    d.items.forEach(function (r, i) { L.push((i + 1) + '. ' + r.name + (r.qty ? ' x' + r.qty + ' ' + r.u : '') + ': ' + money(r.total) + ' đ'); });
+    L.push('', 'TỔNG CỘNG: ' + money(d.total) + ' đ'); if (I.notes) L.push('', I.notes);
+    return L.join('\n');
+  }
+  function doCopy() {
+    var t = copyText();
+    var fb = function () { var a = $('copyArea'); a.value = t; a.style.position = 'fixed'; a.style.left = '0'; a.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} a.style.left = '-9999px'; toast(ok ? 'Đã sao chép nội dung báo giá' : 'Không sao chép được, hãy chọn nội dung và sao chép thủ công'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { toast('Đã sao chép nội dung báo giá'); }, fb); else fb();
+  }
+  $('copyBtn').addEventListener('click', doCopy); $('copyBtn2').addEventListener('click', doCopy);
+
+  /* ---------- xuất PDF ---------- */
+  function slug(s) { return (s || 'khach').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'khach'; }
+  var busy = false;
+  function makePdf() {
+    var host = $('pdfHost'); host.innerHTML = '<div class="sheet force-light">' + sheetHTML(R, true) + '</div>';
+    var node = host.firstChild;
+    var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    return ready.then(function () {
+      return html2canvas(node, { scale: 2, backgroundColor: '#fdfdfb', useCORS: false, logging: false, windowWidth: 794 });
+    }).then(function (cv) {
+      var jsPDF = window.jspdf.jsPDF, pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'p' });
+      var pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+      var sliceH = Math.floor(cv.width * ph / pw), y = 0, first = true;
+      if (cv.height > sliceH && cv.height <= sliceH * 1.3) {
+        var sc = ph / (cv.height * pw / cv.width), w = pw * sc;
+        pdf.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', (pw - w) / 2, 0, w, ph);
+        y = cv.height;
+      }
+      while (y < cv.height) {
+        var h = Math.min(sliceH, cv.height - y), part = document.createElement('canvas');
+        part.width = cv.width; part.height = h;
+        var ctx = part.getContext('2d'); ctx.fillStyle = '#fdfdfb'; ctx.fillRect(0, 0, part.width, h); ctx.drawImage(cv, 0, y, cv.width, h, 0, 0, cv.width, h);
+        if (!first) pdf.addPage();
+        pdf.addImage(part.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, pw, h * pw / cv.width);
+        first = false; y += h;
+      }
+      host.innerHTML = '';
+      return pdf.output('blob');
+    });
+  }
+  function doPdf() {
+    if (busy) return;
+    if (!window.html2canvas || !window.jspdf) { toast('Chưa tải được thư viện tạo PDF, hãy tải lại trang'); return; }
+    busy = true; var btns = [$('pdfBtn'), $('pdfBtn2')], old = btns.map(function (b) { return b.textContent; });
+    btns.forEach(function (b) { b.disabled = true; b.textContent = 'Đang tạo PDF...'; });
+    var done = function () { busy = false; btns.forEach(function (b, i) { b.disabled = false; b.textContent = old[i]; }); };
+    makePdf().then(function (blob) {
+      return (window.claude && claude.use ? claude.use('downloads') : Promise.resolve(null)).then(function (dl) {
+        if (!dl) { toast('Trình xem này không cho tải file. Hãy mở trang trong claude.ai để xuất PDF.'); return; }
+        var d = new Date(), stamp = ('0' + d.getDate()).slice(-2) + ('0' + (d.getMonth() + 1)).slice(-2) + d.getFullYear();
+        return dl.save({ filename: 'Bao-gia-' + slug(state.inp.cust) + '-' + stamp + '.pdf', data: blob }).then(function () { toast('Đã lưu file PDF'); }, function (err) {
+          if (err && err.code === 'declined') return; toast('Không lưu được file PDF');
+        });
+      });
+    }).catch(function () { toast('Không tạo được PDF'); }).then(done, done);
+  }
+  $('pdfBtn').addEventListener('click', doPdf); $('pdfBtn2').addEventListener('click', doPdf);
+  window.__makePdf = function () { return makePdf(); };
+
+  /* ---------- khởi tạo ---------- */
+  function fullRender() {
+    $('tiers').innerHTML = TIER_LBL.map(function (l, i) { return '<label class="tier" for="t' + i + '"><span>' + l + ' (đ/kWh)</span><input id="t' + i + '" type="number" min="0" data-b="ts.tiers.' + i + '"></label>'; }).join('');
+    fillSelects(); renderAllCats(); renderLines(); syncForm(); renderOut(); show(location.hash.slice(1) || 'nhap-lieu');
+  }
+  fullRender();
+})();
+</script>
+
+</body></html>
