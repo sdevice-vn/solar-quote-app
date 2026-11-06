@@ -310,8 +310,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
         <fieldset>
           <legend>Thông số hệ thống</legend>
           <div class="cols">
-            <label for="effInv">Hiệu suất inverter (%)<input id="effInv" type="number" min="1" max="100" data-b="ts.effInv"></label>
-            <label for="effPv">Hiệu suất tấm pin (%)<input id="effPv" type="number" min="1" max="100" data-b="ts.effPv"></label>
+            <label for="effPanel">Hiệu suất trung bình của tấm pin (%)<input id="effPanel" type="number" min="1" max="100" data-b="ts.effPanel"></label>
+            <label for="effLoad">Hiệu suất chuyển đổi từ PV qua inverter ra tải (%)<input id="effLoad" type="number" min="1" max="100" data-b="ts.effLoad"></label>
+            <label for="effChg">Hiệu suất chuyển đổi từ PV qua inverter sạc vào pin lưu trữ (%)<input id="effChg" type="number" min="1" max="100" data-b="ts.effChg"></label>
+            <label for="effBat">Hiệu suất chuyển đổi từ pin qua inverter ra tải (%)<input id="effBat" type="number" min="1" max="100" data-b="ts.effBat"></label>
             <label for="loss">Tổn hao dây dẫn (%)<input id="loss" type="number" min="0" max="50" data-b="ts.loss"></label>
             <label for="sun">Số giờ nắng mỗi ngày (4 – 5,5 giờ)<input id="sun" type="number" min="3" max="7" step="0.1" data-b="ts.sun"></label>
           </div>
@@ -330,7 +332,7 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
   <section id="p-vat-tu-sl" role="tabpanel" class="internal" hidden>
     <div class="panel">
       <div class="scroll"><table class="q" style="min-width:860px"><thead><tr><th>STT</th><th>Tên thiết bị</th><th>ĐVT</th><th class="n">SL</th><th class="n">Giá nhập</th><th class="n">Tiền nhập</th><th class="n">Giá xuất</th><th class="n">Tiền xuất</th></tr></thead><tbody id="bom"></tbody></table></div>
-      <div class="profit"><span>Tiền lãi dự kiến (gồm công lắp đặt, vận chuyển và các phí khác)</span><span id="profit"></span></div>
+      <div class="profit"><span>Tiền lãi dự kiến (gồm công lắp đặt, phí lắp tủ điện và bảo hành, phí dây dẫn; không tính phí vận chuyển)</span><span id="profit"></span></div>
     </div>
   </section>
 
@@ -374,7 +376,7 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
         sel: { cab: 'Tủ điện HL-24WAY', ats: 'ATS 100A LWR', duct: 'Máng điện 8cm' },
         cust: 'Anh Nguyễn Văn A', addr: 'Quận 9, TP. Hồ Chí Minh', seller: 'Phạm Văn Hiếu',
         wDc: 30, wCad: 5, wAwg: 1, fInstall: 0, fTransport: 800000, fCab: 0, fWire: 0, discount: 0, notes: '' },
-      ts: { effInv: 86, effPv: 95, loss: 2, sun: 5, vat: 8, tiers: [1984, 2050, 2380, 2998, 3350, 3460] },
+      ts: { effPanel: 88, effLoad: 95, effChg: 93, effBat: 91, loss: 2, sun: 5, vat: 8, tiers: [1984, 2050, 2380, 2998, 3350, 3460] },
       cat: {
         pv: [
           { b: 'LONGi', m: 'LR7-72HGD-620M', voc: 52.77, imp: 13.99, w: 620, d: 'N-type, 2 mặt kính, 33,5 kg, 2382×1134×30 mm', cost: 2270000, p: 2470000 },
@@ -411,13 +413,16 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
           { kind: 'spdAc', m: 'Chống sét AC', u: 'cái', cost: 89000, p: 109000 },
           { kind: 'cab', m: 'Tủ điện HL-24WAY', u: 'cái', cost: 255000, p: 320000 },
           { kind: 'cab', m: 'Tủ điện 600x400x200', u: 'cái', cost: 1059000, p: 1259000 },
-          { kind: 'mc4', m: 'Đầu nối MC4', u: 'cặp', cost: 15000, p: 20000 }
+          { kind: 'mc4', m: 'Đầu nối MC4', u: 'cặp', cost: 15000, p: 20000 },
+          { kind: 'gndRod', m: 'Cọc tiếp địa', u: 'cái', cost: 120000, p: 150000 },
+          { kind: 'gndWire', m: 'Dây tiếp địa 6.0', u: 'mét', cost: 30000, p: 35000 },
+          { kind: 'conduit', m: 'Ống nhựa 20mm', u: 'ống', cost: 15000, p: 20000 }
         ]
       },
       lines: []
     };
   }
-  var KIND = { dc: 'Dây DC', awg: 'Cáp pin', cad: 'Dây Cadivi', edge: 'Gá lắp', mid: 'Gá lắp', rail: 'Gá lắp', duct: 'Máng điện', ats: 'ATS', mcbDc: 'Tủ điện', mcbAc: 'Tủ điện', spdDc: 'Tủ điện', spdAc: 'Tủ điện', cab: 'Tủ điện', mc4: 'Đầu nối', other: 'Khác' };
+  var KIND = { dc: 'Dây DC', awg: 'Cáp pin', cad: 'Dây Cadivi', edge: 'Gá lắp', mid: 'Gá lắp', rail: 'Gá lắp', duct: 'Máng điện', ats: 'ATS', mcbDc: 'Tủ điện', mcbAc: 'Tủ điện', spdDc: 'Tủ điện', spdAc: 'Tủ điện', cab: 'Tủ điện', mc4: 'Đầu nối', gndRod: 'Tiếp địa', gndWire: 'Tiếp địa', conduit: 'Ống luồn dây', other: 'Khác' };
   var TIER_LIM = [50, 100, 200, 300, 400, Infinity];
   var TIER_LBL = ['Bậc 1: 0 – 50 kWh', 'Bậc 2: 51 – 100 kWh', 'Bậc 3: 101 – 200 kWh', 'Bậc 4: 201 – 300 kWh', 'Bậc 5: 301 – 400 kWh', 'Bậc 6: từ 401 kWh'];
 
@@ -433,6 +438,9 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
       lines: s.lines || []
     };
     if (!state.ts.tiers || state.ts.tiers.length !== 6) state.ts.tiers = d.ts.tiers;
+    var have = {};
+    state.cat.vt.forEach(function (r) { have[r.kind] = 1; });
+    defaults().cat.vt.forEach(function (r) { if (!have[r.kind]) state.cat.vt.push(r); });
   }
 
   /* ---------- lưu trữ (db dùng chung, dự phòng localStorage) ---------- */
@@ -483,16 +491,17 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
   function calc() {
     var I = state.inp, T = state.ts, C = state.cat;
     var tp = T.tiers.map(N), vat = N(T.vat) / 100;
-    var effInv = N(T.effInv) / 100, effPv = N(T.effPv) / 100, loss = N(T.loss) / 100, sun = N(T.sun);
+    var effPanel = N(T.effPanel) / 100, effLoad = N(T.effLoad) / 100, effChg = N(T.effChg) / 100, effBat = N(T.effBat) / 100, loss = N(T.loss) / 100, sun = N(T.sun);
     var pv = C.pv.find(function (x) { return x.m === I.pv; }) || C.pv[0];
     var bill, kwhMonth;
     if (I.mode === 'kwh') { kwhMonth = N(I.kwh); bill = tierCost(kwhMonth, tp) * (1 + vat); }
     else { bill = N(I.money); kwhMonth = tierKwh(bill / (1 + vat), tp); }
     var cutKwh = kwhMonth * N(I.cut) / 100, perDay = cutKwh / 30;
-    var perPanel = (N(pv.w) / 1000) * effPv * effInv * (1 - loss) * sun;
-    var n = perPanel > 0 ? Math.ceil(perDay / perPanel - 1e-9) : 0;
+    var batDay = perDay * (100 - N(I.day)) / 100;
+    var batNeed = batDay + (batDay - batDay * effBat);
+    var perPanel = (N(pv.w) / 1000) * effPanel * effLoad * effChg * (1 - loss) * sun;
+    var n = perPanel > 0 ? Math.ceil((perDay * N(I.day) / 100 + batNeed) / perPanel - 1e-9) : 0;
     var kwp = n * N(pv.w) / 1000;
-    var batNeed = perDay * (100 - N(I.day)) / 100;
     var warns = [];
 
     var inv;
@@ -521,12 +530,13 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
 
     var strings = Math.ceil(n / 8), q = {
       dc: N(I.wDc), awg: N(I.wAwg), cad: N(I.wCad), duct: 1, mc4: strings,
+      gndRod: 1, gndWire: Math.ceil(N(I.wDc) / 2 + 3 - 1e-9), conduit: Math.ceil(N(I.wDc) / 2 + 1 - 1e-9),
       edge: 4 * strings, mid: Math.max(0, n * 2 - 2), rail: n ? n * 2 + 2 : 0,
       mcbDc: n <= 8 ? 1 : n <= 16 ? 2 : 3, mcbAc: 4, spdDc: n <= 8 ? 1 : n <= 16 ? 2 : 3, spdAc: 1, cab: 1, ats: 1
     };
     var bom = [{ name: pv.m, u: 'Tấm', qty: n, cost: N(pv.cost), p: N(pv.p) }, { name: inv.m, u: 'Bộ', qty: 1, cost: N(inv.cost), p: N(inv.p) }];
     if (bat) bom.push({ name: bat.m, u: 'Bộ', qty: batQty, cost: N(bat.cost), p: N(bat.p) });
-    var G = { cable: ['dc', 'awg', 'cad', 'duct', 'mc4'], rack: ['edge', 'mid', 'rail'], cab: ['mcbDc', 'mcbAc', 'spdDc', 'spdAc', 'cab', 'ats'] };
+    var G = { cable: ['dc', 'awg', 'cad', 'duct', 'mc4', 'gndRod', 'gndWire', 'conduit'], rack: ['edge', 'mid', 'rail'], cab: ['mcbDc', 'mcbAc', 'spdDc', 'spdAc', 'cab', 'ats'] };
     Object.keys(G).forEach(function (g) {
       G[g].forEach(function (k) { var r = vt(k); bom.push({ name: r.m, u: r.u, qty: q[k], cost: N(r.cost), p: N(r.p), g: g }); });
     });
@@ -557,10 +567,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
     var total = items.reduce(function (s, r) { return s + r.total; }, 0);
     var save = tierCost(cutKwh, tp) * (1 + vat);
     var sNhap = bom.reduce(function (s, r) { return s + r.qty * r.cost; }, 0), sXuat = bom.reduce(function (s, r) { return s + r.qty * r.p; }, 0);
-    var profit = sXuat - sNhap + fee.install + fee.transport + fee.cab + fee.wire - disc;
+    var profit = sXuat - sNhap + fee.install + fee.cab + fee.wire - disc;
     return { pv: pv, inv: inv, bat: bat, batQty: batQty, n: n, kwp: kwp, bill: bill, kwhMonth: kwhMonth, cutKwh: cutKwh, perDay: perDay, batNeed: batNeed,
       items: items, bom: bom, total: total, save: save, payback: save > 0 ? total / (save * 12) : 0, profit: profit, sNhap: sNhap, sXuat: sXuat, warns: warns,
-      effPv: effPv };
+      effPanel: effPanel };
   }
 
   /* ---------- hiển thị ---------- */
@@ -616,8 +626,8 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
     return '<h3 class="cap" style="margin-top:0">Khi chưa lắp điện mặt trời</h3>' +
       row('Tiền điện mỗi tháng', money(r.bill) + ' đ') + row('Số kWh mỗi tháng', f1.format(r.kwhMonth)) + row('Số kWh mỗi ngày', f1.format(r.kwhMonth / 30)) + row('Công suất tải trung bình', f2.format(r.kwhMonth / 30 / 24) + ' kW') +
       '<h3 class="cap">Thông số dự kiến sau khi lắp</h3>' +
-      row('Số kWh mỗi tháng cần giảm', f1.format(r.cutKwh)) + row('Số kWh mỗi ngày cần giảm', f1.format(r.perDay)) + row('Số tấm pin cần lắp', r.n) + row('Công suất hệ (kWp)', f2.format(r.kwp)) +
-      row('Công suất PV tối đa đã trừ hiệu suất (kWp)', f2.format(r.kwp * r.effPv)) + row('Dung lượng pin lưu trữ cần (kWh)', f2.format(r.batNeed)) +
+      row('Số kWh mỗi tháng cần giảm', f1.format(r.cutKwh)) + row('Số kWh mỗi ngày cần giảm', f1.format(r.perDay)) + row('Số tấm pin cần lắp (đã trừ tổn hao và hiệu suất)', r.n) + row('Công suất hệ (kWp)', f2.format(r.kwp)) +
+      row('Công suất PV tối đa đã trừ hiệu suất (kWp)', f2.format(r.kwp * r.effPanel)) + row('Dung lượng pin lưu trữ cần lắp (kWh)', f2.format(r.batNeed)) +
       row('Tiền điện giảm mỗi tháng (có VAT)', money(r.save) + ' đ') + row('Thời gian thu hồi vốn', r.save > 0 ? f1.format(r.payback) + ' năm' : '—');
   }
 
