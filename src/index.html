@@ -135,6 +135,10 @@ th { text-align: left; font: 600 12px var(--font-body); color: var(--muted); pad
 td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.stt { color: var(--muted); width: 34px; }
+.qe { width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: var(--paper); border: 1px dashed var(--line); border-radius: 4px; padding: 4px 6px; min-height: 30px; }
+textarea.qe { resize: vertical; min-height: 58px; line-height: 1.35; field-sizing: content; }
+td input.qe { min-width: 64px; }
+body.present .qe { border-color: transparent; background: transparent; pointer-events: none; resize: none; padding-left: 0; }
 td .model { font: 500 13px var(--font-mono); }
 td .kind { display: block; font-weight: 700; margin-bottom: 2px; }
 td .sub { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -431,7 +435,13 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
           { kind: 'conduit', m: 'Ống nhựa 20mm', u: 'ống', cost: 15000, p: 20000 }
         ]
       },
-      lines: []
+      lines: [],
+      qt: {
+        cable: { name: 'Dây Leader DC đỏ-đen 4mm, cáp pin AWG4, dây Cadivi, máng điện, vật tư phụ, đầu nối MC4...', u: 'Toàn bộ', warr: '' },
+        rack: { name: 'Gá lắp tấm pin năng lượng mặt trời', u: 'Bộ', warr: '' },
+        cab: { name: 'Tủ điện, ATS chuyển nguồn, CB DC, CB AC, chống sét DC/AC...', u: 'Bộ', warr: '1 năm' },
+        labor: { name: 'Công vận chuyển, lắp đặt trên mái', u: '', warr: '' }
+      }
     };
   }
   var KIND = { dc: 'Dây DC', awg: 'Cáp pin', cad: 'Dây Cadivi', edge: 'Gá lắp', mid: 'Gá lắp', rail: 'Gá lắp', duct: 'Máng điện', ats: 'ATS', mcbDc: 'Tủ điện', mcbAc: 'Tủ điện', spdDc: 'Tủ điện', spdAc: 'Tủ điện', cab: 'Tủ điện', mc4: 'Đầu nối', gndRod: 'Tiếp địa', gndWire: 'Tiếp địa', conduit: 'Ống luồn dây', other: 'Khác' };
@@ -447,8 +457,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
       inp: Object.assign(d.inp, s.inp || {}, { sel: Object.assign(d.inp.sel, (s.inp || {}).sel || {}) }),
       ts: Object.assign(d.ts, s.ts || {}),
       cat: Object.assign(d.cat, s.cat || {}),
-      lines: s.lines || []
+      lines: s.lines || [],
+      qt: d.qt
     };
+    Object.keys(d.qt).forEach(function (k) { Object.assign(d.qt[k], (s.qt || {})[k] || {}); });
     if (!state.ts.tiers || state.ts.tiers.length !== 6) state.ts.tiers = d.ts.tiers;
     var have = {};
     state.cat.vt.forEach(function (r) { have[r.kind] = 1; });
@@ -562,10 +574,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
     ];
     if (bat) items.push({ kind: 'Pin lưu trữ', name: bat.m, sub: (bat.b || '') + ' LiFePO4 ' + bat.kwh + ' kWh · tổng ' + f2.format(N(bat.kwh) * batQty) + ' kWh', batEdit: 1, mono: 1, u: 'Bộ', qty: batQty, price: N(bat.p), total: N(bat.p) * batQty, warr: '5 năm' });
     items.push(
-      { name: 'Dây Leader DC đỏ-đen 4mm, cáp pin AWG4, dây Cadivi, máng điện, vật tư phụ, đầu nối MC4...', u: 'Toàn bộ', qty: 1, price: cableT, total: cableT, detail: detail('cable', fee.wire ? [['Phí phát sinh dây dẫn', '', 1, fee.wire]] : []) },
-      { name: 'Gá lắp tấm pin năng lượng mặt trời', u: 'Bộ', qty: 1, price: rackT, total: rackT, detail: detail('rack') },
-      { name: 'Tủ điện, ATS chuyển nguồn, CB DC, CB AC, chống sét DC/AC...', u: 'Bộ', qty: 1, price: cabT, total: cabT, warr: '1 năm', detail: detail('cab', fee.cab ? [['Lắp tủ điện và bảo hành', '', 1, fee.cab]] : []) },
-      { name: 'Công vận chuyển, lắp đặt trên mái', u: '', qty: '', price: laborT, total: laborT, detail: [['Vận chuyển', '', 1, fee.transport]].concat(fee.install ? [['Công lắp đặt trên mái', '', 1, fee.install]] : []) }
+      { qk: 'cable', name: state.qt.cable.name, u: state.qt.cable.u, warr: state.qt.cable.warr, qty: 1, price: cableT, total: cableT, detail: detail('cable', fee.wire ? [['Phí phát sinh dây dẫn', '', 1, fee.wire]] : []) },
+      { qk: 'rack', name: state.qt.rack.name, u: state.qt.rack.u, warr: state.qt.rack.warr, qty: 1, price: rackT, total: rackT, detail: detail('rack') },
+      { qk: 'cab', name: state.qt.cab.name, u: state.qt.cab.u, warr: state.qt.cab.warr, qty: 1, price: cabT, total: cabT, detail: detail('cab', fee.cab ? [['Lắp tủ điện và bảo hành', '', 1, fee.cab]] : []) },
+      { qk: 'labor', name: state.qt.labor.name, u: state.qt.labor.u, warr: state.qt.labor.warr, qty: '', price: laborT, total: laborT, detail: [['Vận chuyển', '', 1, fee.transport]].concat(fee.install ? [['Công lắp đặt trên mái', '', 1, fee.install]] : []) }
     );
     var customCost = 0;
     state.lines.forEach(function (l) {
@@ -602,12 +614,20 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
   function usageText(r) {
     return 'Dùng khoảng ' + f1.format(r.kwhMonth) + ' kWh mỗi tháng, hệ thống cần bù ' + f1.format(r.cutKwh) + ' kWh (' + f1.format(r.perDay) + ' kWh mỗi ngày). Pin lưu trữ cần khoảng ' + f1.format(r.batNeed) + ' kWh.';
   }
+  function ed(it, f, pdf, label) {
+    if (!it.qk || pdf) return esc(it[f] || '');
+    return '<input class="qe" type="text" data-qt="' + it.qk + '.' + f + '" value="' + esc(it[f] || '') + '" aria-label="' + label + '">';
+  }
+  function nameCell(it, pdf) {
+    if (it.qk && !pdf) return '<textarea class="qe" rows="3" data-qt="' + it.qk + '.name" aria-label="Tên thiết bị">' + esc(it.name) + '</textarea>';
+    return (it.kind ? '<span class="kind">' + esc(it.kind) + '</span>' : '') + '<span class="' + (it.mono ? 'model' : '') + '">' + esc(it.name) + '</span>' + (it.sub ? '<span class="sub">' + esc(it.sub) + '</span>' : '');
+  }
   function rowsHTML(r, pdf) {
     var h = '', i = 0;
     r.items.forEach(function (it) {
       i++;
-      h += '<tr' + (it.neg ? ' class="neg"' : '') + '><td class="stt">' + i + '</td><td>' + (it.kind ? '<span class="kind">' + esc(it.kind) + '</span>' : '') + '<span class="' + (it.mono ? 'model' : '') + '">' + esc(it.name) + '</span>' + (it.sub ? '<span class="sub">' + esc(it.sub) + '</span>' : '') +
-        '</td><td>' + esc(it.u) + '</td><td class="n">' + (it.batEdit && !pdf ? '<span class="qty"><button type="button" class="qb" data-batqty="-1" aria-label="Giảm số lượng pin">−</button><input id="batQtyIn" type="number" min="1" step="1" value="' + it.qty + '" aria-label="Số lượng pin lưu trữ"><button type="button" class="qb" data-batqty="1" aria-label="Tăng số lượng pin">+</button></span>' : it.qty) + '</td><td class="n">' + (it.neg ? '−' + money(-it.price) : money(it.price)) + '</td><td class="n">' + (it.neg ? '−' + money(-it.total) : money(it.total)) + '</td><td>' + esc(it.warr || '') + '</td></tr>';
+      h += '<tr' + (it.neg ? ' class="neg"' : '') + '><td class="stt">' + i + '</td><td>' + nameCell(it, pdf) +
+        '</td><td>' + ed(it, 'u', pdf, 'ĐVT') + '</td><td class="n">' + (it.batEdit && !pdf ? '<span class="qty"><button type="button" class="qb" data-batqty="-1" aria-label="Giảm số lượng pin">−</button><input id="batQtyIn" type="number" min="1" step="1" value="' + it.qty + '" aria-label="Số lượng pin lưu trữ"><button type="button" class="qb" data-batqty="1" aria-label="Tăng số lượng pin">+</button></span>' : it.qty) + '</td><td class="n">' + (it.neg ? '−' + money(-it.price) : money(it.price)) + '</td><td class="n">' + (it.neg ? '−' + money(-it.total) : money(it.total)) + '</td><td>' + ed(it, 'warr', pdf, 'Bảo hành') + '</td></tr>';
       if (showDetail && it.detail) it.detail.forEach(function (s) {
         if (!s[2]) return;
         h += '<tr class="sub"><td></td><td>' + esc(s[0]) + '</td><td>' + esc(s[1]) + '</td><td class="n">' + s[2] + '</td><td class="n">' + money(s[3]) + '</td><td class="n">' + money(s[2] * s[3]) + '</td><td></td></tr>';
@@ -686,6 +706,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
     }
   });
   function setBatQty(v) { state.inp.batQty = Math.max(1, Math.floor(v) || 1); syncForm(); persist(); renderOut(); }
+  $('sheet').addEventListener('input', function (e) {
+    var k = e.target.dataset && e.target.dataset.qt; if (!k) return;
+    var a = k.split('.'); state.qt[a[0]][a[1]] = e.target.value; R = calc(); persist();
+  });
   $('sheet').addEventListener('change', function (e) { if (e.target.id === 'batQtyIn') setBatQty(parseFloat(e.target.value)); });
   $('sheet').addEventListener('click', function (e) {
     var b = e.target.closest('[data-batqty]'); if (!b || !R) return;
