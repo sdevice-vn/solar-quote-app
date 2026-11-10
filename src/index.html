@@ -440,7 +440,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
         cable: { name: 'Dây Leader DC đỏ-đen 4mm, cáp pin AWG4, dây Cadivi, máng điện, vật tư phụ, đầu nối MC4...', u: 'Toàn bộ', warr: '' },
         rack: { name: 'Gá lắp tấm pin năng lượng mặt trời', u: 'Bộ', warr: '' },
         cab: { name: 'Tủ điện, ATS chuyển nguồn, CB DC, CB AC, chống sét DC/AC...', u: 'Bộ', warr: '1 năm' },
-        labor: { name: 'Công vận chuyển, lắp đặt trên mái', u: '', warr: '' }
+        labor: { name: 'Công vận chuyển, lắp đặt trên mái', u: '', warr: '' },
+        pv: { warr: null, 'for': '' },
+        inv: { warr: null, 'for': '' },
+        bat: { warr: null, 'for': '' }
       }
     };
   }
@@ -569,10 +572,10 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
     var detail = function (g, extra) { return bom.filter(function (r) { return r.g === g && r.qty; }).map(function (r) { return [r.name, r.u, r.qty, r.p]; }).concat(extra || []); };
     var cableT = fee.wire + gsum('cable'), rackT = gsum('rack'), cabT = fee.cab + gsum('cab'), laborT = fee.install + fee.transport;
     var items = [
-      { kind: 'Tấm pin NLMT', name: pv.m, sub: (pv.b || '') + ' · ' + (pv.d || ''), mono: 1, u: 'Tấm', qty: n, price: N(pv.p), total: n * N(pv.p), warr: '12 năm (theo nhà sản xuất)' },
-      { kind: 'Biến tần', name: inv.m, sub: (inv.b || '') + ' hybrid ' + inv.ac + ' kW, tối đa ' + inv.pvMax + ' kWp', mono: 1, u: 'Bộ', qty: 1, price: N(inv.p), total: N(inv.p), warr: '3 năm' }
+      { kind: 'Tấm pin NLMT', name: pv.m, sub: (pv.b || '') + ' · ' + (pv.d || ''), mono: 1, u: 'Tấm', qty: n, price: N(pv.p), total: n * N(pv.p), wk: 'pv', wm: pv.m, warr: wd('pv', pv.m, '12 năm (theo nhà sản xuất)') },
+      { kind: 'Biến tần', name: inv.m, sub: (inv.b || '') + ' hybrid ' + inv.ac + ' kW, tối đa ' + inv.pvMax + ' kWp', mono: 1, u: 'Bộ', qty: 1, price: N(inv.p), total: N(inv.p), wk: 'inv', wm: inv.m, warr: wd('inv', inv.m, '3 năm') }
     ];
-    if (bat) items.push({ kind: 'Pin lưu trữ', name: bat.m, sub: (bat.b || '') + ' LiFePO4 ' + bat.kwh + ' kWh · tổng ' + f2.format(N(bat.kwh) * batQty) + ' kWh', batEdit: 1, mono: 1, u: 'Bộ', qty: batQty, price: N(bat.p), total: N(bat.p) * batQty, warr: '5 năm' });
+    if (bat) items.push({ kind: 'Pin lưu trữ', name: bat.m, sub: (bat.b || '') + ' LiFePO4 ' + bat.kwh + ' kWh · tổng ' + f2.format(N(bat.kwh) * batQty) + ' kWh', batEdit: 1, mono: 1, u: 'Bộ', qty: batQty, price: N(bat.p), total: N(bat.p) * batQty, wk: 'bat', wm: bat.m, warr: wd('bat', bat.m, '5 năm') });
     items.push(
       { qk: 'cable', name: state.qt.cable.name, u: state.qt.cable.u, warr: state.qt.cable.warr, qty: 1, price: cableT, total: cableT, detail: detail('cable', fee.wire ? [['Phí phát sinh dây dẫn', '', 1, fee.wire]] : []) },
       { qk: 'rack', name: state.qt.rack.name, u: state.qt.rack.u, warr: state.qt.rack.warr, qty: 1, price: rackT, total: rackT, detail: detail('rack') },
@@ -580,9 +583,9 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
       { qk: 'labor', name: state.qt.labor.name, u: state.qt.labor.u, warr: state.qt.labor.warr, qty: '', price: laborT, total: laborT, detail: [['Vận chuyển', '', 1, fee.transport]].concat(fee.install ? [['Công lắp đặt trên mái', '', 1, fee.install]] : []) }
     );
     var customCost = 0;
-    state.lines.forEach(function (l) {
+    state.lines.forEach(function (l, li) {
       var qn = N(l.qty), pr = N(l.price);
-      items.push({ name: l.name || '(chưa đặt tên)', u: l.u, qty: l.qty === '' ? '' : qn, price: pr, total: qn * pr, warr: l.warr, custom: 1 });
+      items.push({ name: l.name || '(chưa đặt tên)', u: l.u, qty: l.qty === '' ? '' : qn, price: pr, total: qn * pr, warr: l.warr, wk: 'line.' + li, custom: 1 });
       customCost += qn * N(l.cost);
       bom.push({ name: l.name || '(chưa đặt tên)', u: l.u, qty: qn, cost: N(l.cost), p: pr, custom: 1 });
     });
@@ -614,9 +617,11 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
   function usageText(r) {
     return 'Dùng khoảng ' + f1.format(r.kwhMonth) + ' kWh mỗi tháng, hệ thống cần bù ' + f1.format(r.cutKwh) + ' kWh (' + f1.format(r.perDay) + ' kWh mỗi ngày). Pin lưu trữ cần khoảng ' + f1.format(r.batNeed) + ' kWh.';
   }
+  function wd(k, model, def) { var o = state.qt[k]; return o && o.warr != null && o['for'] === model ? o.warr : def; }
   function ed(it, f, pdf, label) {
-    if (!it.qk || pdf) return esc(it[f] || '');
-    return '<input class="qe" type="text" data-qt="' + it.qk + '.' + f + '" value="' + esc(it[f] || '') + '" aria-label="' + label + '">';
+    var key = it.qk || (f === 'warr' ? it.wk : null);
+    if (!key || pdf) return esc(it[f] || '');
+    return '<input class="qe" type="text" data-qt="' + key + '.' + f + '" value="' + esc(it[f] || '') + '" aria-label="' + label + '">';
   }
   function nameCell(it, pdf) {
     if (it.qk && !pdf) return '<textarea class="qe" rows="3" data-qt="' + it.qk + '.name" aria-label="Tên thiết bị">' + esc(it.name) + '</textarea>';
@@ -708,7 +713,16 @@ tr.total .sum { font: 800 clamp(20px, 2.6vw, 26px) var(--font-display); color: v
   function setBatQty(v) { state.inp.batQty = Math.max(1, Math.floor(v) || 1); syncForm(); persist(); renderOut(); }
   $('sheet').addEventListener('input', function (e) {
     var k = e.target.dataset && e.target.dataset.qt; if (!k) return;
-    var a = k.split('.'); state.qt[a[0]][a[1]] = e.target.value; R = calc(); persist();
+    var a = k.split('.'), v = e.target.value;
+    if (a[0] === 'line') { state.lines[+a[1]].warr = v; renderLines(); }
+    else {
+      state.qt[a[0]][a[1]] = v;
+      if (a[0] === 'pv' || a[0] === 'inv' || a[0] === 'bat') {
+        var hit = R.items.filter(function (x) { return x.wk === a[0]; })[0];
+        state.qt[a[0]]['for'] = hit ? hit.wm : '';
+      }
+    }
+    R = calc(); persist();
   });
   $('sheet').addEventListener('change', function (e) { if (e.target.id === 'batQtyIn') setBatQty(parseFloat(e.target.value)); });
   $('sheet').addEventListener('click', function (e) {
